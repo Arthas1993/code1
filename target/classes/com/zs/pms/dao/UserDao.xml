@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--与dao接口建立联系-->
+<mapper namespace="com.zs.pms.dao.UserDao">
+<select id="queryByUid" parameterType="int" resultType="Tpermission">
+select * from tpermission where id in(
+select pid from trolepermission where rid in (
+select rid from tuserrole where usid=
+#{id}))
+</select>
+<!-- sql片段 -->
+<sql id="selector">
+select * from tuser
+</sql>
+<!-- sql片段 -->
+<sql id="where">
+<!-- 条件标签自动拼 -->
+<where>
+<!-- 登录名不能为空或空串 -->
+<if test="loginname!=null and loginname!=''">
+and loginname=#{loginname}
+</if>
+<!-- 密码不能为空或空串 -->
+<if test="password!=null and password!=''">
+and password=#{password}
+</if>
+<!-- 性别 -->
+<if test="sex!=null and sex!=''">
+and sex=#{sex}
+</if>
+<!-- 性别 -->
+<if test="isenabled!=0">
+and isenabled=#{isenabled}
+</if>
+</where>
+</sql>
+<!-- sql片段 -->
+<sql id="order">
+order by id desc
+</sql>
+<!-- sql片段 -->
+<sql id="page">
+<where>
+b.rn&gt;=#{start} and b.rn&lt;=#{end}
+</where>
+</sql>
+
+<resultMap type="TUser" id="usermap">
+<id property="id" column="id"/>
+<association property="dept" column="dept" select="getDep"></association>
+</resultMap>
+
+<select id="getDep" parameterType="int" resultType="TDep">
+select * from tdep where id=#{dept}
+</select>
+
+<!-- 批量查询 -->
+<select id="queryUserByPage" parameterType="QueryUser" resultMap="usermap">
+select b.* from
+(select rownum rn,a.* from (
+<include refid="selector"></include>
+<include refid="where"></include>
+<include refid="order"></include>
+) a) b
+<include refid="page"></include>
+</select>
+
+
+
+<!-- 拼条件 -->
+<select id="queryByCon" parameterType="QueryUser" resultType="TUser">
+select * from tuser
+<!-- 引入sql片段 -->
+<include refid="where"/>
+</select>
+
+<!-- 获得总条数 -->
+<select id="queryCount" parameterType="QueryUser" resultType="int" >
+select count(1) from tuser
+<include refid="where"></include>
+
+</select>
+
+
+<!-- 批量删除 -->
+<delete id="deleteByIds">
+delete from tuser where id in
+<!-- 循环ids (x,x,x,x) -->
+<!-- 
+collection:参数的类型  array:数组
+item:数组中每项的临时变量名
+separator:每项用什么分隔
+open:起始
+close:结束
+ -->
+ <foreach collection="array" item="id" separator="," open="(" close=")">
+ #{id}
+ </foreach>
+</delete>
+<!-- 修改   有才改，没有不改-->
+<update id="updateUser" parameterType="Tuser">
+update tuser
+<!-- 修改一条 -->
+<set>
+<if test="loginname!=null and loginname!=''">
+loginname=#{loginname},
+</if>
+<if test="password!=null and password!=''">
+password=#{password},
+</if>
+<if test="realname!=null and realname!=''">
+realname=#{realname},
+</if>
+<if test="sex!=null and sex!=''">
+sex=#{sex},
+</if>
+<if test="birthday!=null and birthday!=''">
+birthday=#{birthday},
+</if>
+<if test="dept!=null">
+dept=#{dept.id},
+</if>
+<if test="email!=null and email!=''">
+email=#{email},
+</if>
+<if test="isenabled!=0">
+isenabled=#{isenabled},
+</if>
+<if test="pic!=null and pic!=''">
+pic=#{pic},
+</if>
+<if test="updator!=0">
+updator=#{updator},
+</if>
+updatetime=sysdate,
+</set>
+where id=#{id}
+</update>
+<!-- 新增 -->
+<insert id="insertUser" parameterType="TUser">
+<!-- 主键采用序列
+keyproperty:属性 order:生成顺序 resultType :返回类型
+ -->
+<selectKey keyProperty="id" order="BEFORE" resultType="int">
+select seq_tuser.nextval from dual
+</selectKey>
+insert into tuser(id,loginname,realname,sex,birthday,dept,email,isenabled,password,creator,createtime,pic)
+values(#{id},#{loginname},#{realname},#{sex},sysdate,#{dept.id},#{email},#{isenabled},#{password},#{creator},sysdate,#{pic})
+</insert>
+<delete id="deleteById" parameterType="int">
+delete from tuser where id=#{id}
+</delete>
+</mapper>
